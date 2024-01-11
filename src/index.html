@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Renting System</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.3.6/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #8473de;
+            color: #333;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        div {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.5s ease-in-out;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        #vehicleDetails {
+            margin-top: 10px;
+            color: #27ae60;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Vehicle Renting System</h1>
+
+<!-- Add Vehicle Form -->
+<div>
+    <h2>Add Vehicle</h2>
+    <label>Make: <input type="text" id="make"></label>
+    <label>Model: <input type="text" id="model"></label>
+    <label>Rental Price: <input type="number" id="rentalPrice"></label>
+    <button onclick="addVehicle()">Add Vehicle</button>
+</div>
+
+<!-- Register Renter Form -->
+<div>
+    <h2>Register Renter</h2>
+    <label>Renter Address: <input type="text" id="renterAddress"></label>
+    <label>Name: <input type="text" id="renterName"></label>
+    <button onclick="registerRenter()">Register Renter</button>
+</div>
+
+<!-- Register Rentee Form -->
+<div>
+    <h2>Register Rentee</h2>
+    <label>Rentee Address: <input type="text" id="renteeAddress"></label>
+    <label>Name: <input type="text" id="renteeName"></label>
+    <label>Initial Balance: <input type="number" id="initialBalance"></label>
+    <button onclick="registerRentee()">Register Rentee</button>
+</div>
+
+<!-- Display Available Vehicles Button -->
+<div>
+    <h2>Available Vehicles</h2>
+    <button onclick="displayAvailableVehicles()">Display Available Vehicles</button>
+    <ul id="availableVehicles"></ul>
+</div>
+
+<!-- Rent Vehicle Form -->
+<div>
+  <h2>Rent Vehicle</h2>
+  <label for="rentVehicleAddress">Vehicle Address: <input type="text" id="rentVehicleAddress"></label>
+  <label for="inputAmountInWei">Input Amount: <input type="number" id="inputAmountInWei"></label>
+  <button onclick="rentVehicle()">Rent Vehicle</button>
+</div>
+
+<!-- Return Vehicle Form -->
+<div>
+    <h2>Return Vehicle</h2>
+    <label>Vehicle Address: <input type="text" id="returnVehicleAddress"></label>
+    <button onclick="returnVehicle()">Return Vehicle</button>
+</div>
+
+<!-- Get Vehicle Details Form -->
+<div>
+    <h2>Get Vehicle Details</h2>
+    <label>Vehicle Address: <input type="text" id="getVehicleDetailsAddress"></label>
+    <button onclick="getVehicleDetails()">Get Vehicle Details</button>
+    <p id="vehicleDetails"></p>
+</div>
+
+<script>
+
+    let contractData;
+      const jsonFilePath = "../build/contracts/VehicleRentingSystem.json";
+
+    // Define a function to fetch JSON data synchronously
+    function fetchJsonSynchronously() {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', jsonFilePath, false); // Note the 'false' for synchronous
+        xhr.send();
+
+        if (xhr.status === 200) {
+            contractData = JSON.parse(xhr.responseText);
+            console.log(contractData);
+        } else {
+            // Handle errors
+            console.error(`Error fetching JSON: ${xhr.statusText}`);
+        }
+    }
+
+    fetchJsonSynchronously()
+    const contractABI = contractData.abi;
+    //
+    // change the contract address whenever
+    //
+    const contractAddress = '0x1d929495368F08598712744e21443397A7B9259e';
+
+    // Use the web3 library to create a contract instance
+    const web3 = new Web3(Web3.givenProvider);
+    const contract = new web3.eth.Contract(contractABI, contractAddress);
+   
+    // Function to add a new vehicle
+    async function addVehicle() {
+
+      const senderAddresses = await window.ethereum.request({
+        "method": "eth_requestAccounts",
+        "params": []
+      });
+      console.log(senderAddresses);
+
+      const senderAddress = senderAddresses[0]
+      // console.log(senderAddress);
+
+
+        // Get input values
+        const make = document.getElementById('make').value;
+        const model = document.getElementById('model').value;
+        const rentalPrice = document.getElementById('rentalPrice').value;   
+
+        // console.log(senderAddress);
+        // Call the addVehicle function in the smart contract
+        contract.methods.addVehicle(make, model, rentalPrice).send({ from: senderAddress})
+            .then(() => {
+                alert('Vehicle added successfully!');
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error adding vehicle');
+            });
+    }
+
+    // Function to register a new renter
+    async function registerRenter() {
+        // Get input values
+
+        const senderAddresses = await window.ethereum.request({
+              "method": "eth_requestAccounts",
+              "params": []
+            });
+
+        const senderAddress = senderAddresses[0]
+        console.log(senderAddress);
+
+        const renterAddress = document.getElementById('renterAddress').value;
+        const renterName = document.getElementById('renterName').value;
+
+        // Check if senderAddress is defined
+        if (!senderAddress) {
+            alert('No sender address specified.');
+            return;
+        }
+
+        // Call the registerRenter function in the smart contract
+        contract.methods.registerRenter(renterAddress, renterName).send({ from: senderAddress })
+            .then(() => {
+                alert('Renter registered successfully!');
+            })
+            .catch(error => { 
+                console.error(error);
+                alert('Error registering renter');
+            });
+    }
+
+    // Function to register a new rentee
+    async function registerRentee() {
+
+      const senderAddresses = await window.ethereum.request({
+              "method": "eth_requestAccounts",
+              "params": []
+            });
+
+        const senderAddress = senderAddresses[0]
+        console.log(senderAddress);
+
+
+        // Get input values
+        const renteeAddress = document.getElementById('renteeAddress').value;
+        const renteeName = document.getElementById('renteeName').value;
+        const initialBalance = document.getElementById('initialBalance').value;
+
+        // Call the registerRentee function in the smart contract
+        contract.methods.registerRentee(renteeAddress, renteeName, initialBalance).send({ from: senderAddress })
+            .then(() => {
+                alert('Rentee registered successfully!');
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error registering rentee');
+            });
+    }
+
+    // Function to display available vehicles
+    async function displayAvailableVehicles() {
+        // Call the displayAvailableVehicles function in the smart contract
+
+        const vehicles = await contract.methods.displayAvailableVehicles().call();
+        
+        console.log(vehicles);
+
+        const listElement = document.getElementById('availableVehicles');
+        listElement.innerHTML = '';
+
+        vehicles.forEach(vehicle => {
+            const listItem = document.createElement('li');
+            listItem.textContent = vehicle;
+            listElement.appendChild(listItem);
+        });
+
+        // contract.methods.displayAvailableVehicles().call()
+        //     .then(vehicles => {
+        //         const listElement = document.getElementById('availableVehicles');
+        //         listElement.innerHTML = '';
+
+        //         vehicles.forEach(vehicle => {
+        //             const listItem = document.createElement('li');
+        //             listItem.textContent = vehicle;
+        //             listElement.appendChild(listItem);
+        //         });
+        //     })
+        //     .catch(error => {
+        //         console.error(error);
+        //         alert('Error displaying available vehicles');
+        //     });
+    }
+
+    async function rentVehicle() {
+      const senderAddresses = await window.ethereum.request({
+          "method": "eth_requestAccounts",
+          "params": []
+      });
+
+      const senderAddress = senderAddresses[0];
+      console.log(senderAddress);
+
+      // Get input values
+      const vehicleAddress = document.getElementById('rentVehicleAddress').value;
+      const rentalAmountInWei = document.getElementById('inputAmountInWei').value;
+
+      // Call the rentVehicle function in the smart contract
+      contract.methods.rentVehicle(vehicleAddress).send({ from: senderAddress, value: inputAmountInWei })
+          .then(() => {
+              alert('Vehicle rented successfully!');
+          })
+          .catch(error => {
+              console.error(error);
+              alert('Error renting vehicle');
+          });
+    }
+
+    // Function to return a rented vehicle
+    async function returnVehicle() {
+
+      const senderAddresses = await window.ethereum.request({
+            "method": "eth_requestAccounts",
+            "params": []
+          });
+
+      const senderAddress = senderAddresses[0]
+      console.log(senderAddress);
+
+        // Get input values
+        const vehicleAddress = document.getElementById('returnVehicleAddress').value;
+
+        // Call the returnVehicle function in the smart contract
+        contract.methods.returnVehicle(vehicleAddress).send({ from: senderAddress })
+            .then(() => {
+                alert('Vehicle returned successfully!');
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error returning vehicle');
+            });
+    }
+
+    // Function to get vehicle details
+    function getVehicleDetails() {
+        // Get input values
+        const vehicleAddress = document.getElementById('getVehicleDetailsAddress').value;
+
+        // Call the getVehicleDetails function in the smart contract
+        contract.methods.getVehicleDetails(vehicleAddress).call()
+            .then(details => {
+                const vehicleDetailsElement = document.getElementById('vehicleDetails');
+                vehicleDetailsElement.textContent = `Make: ${details[0]}, Model: ${details[1]}, Rental Price: ${details[2]}, Status: ${details[3]}`;
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error getting vehicle details');
+            });
+    }
+</script>
+
+</body>
+</html>
